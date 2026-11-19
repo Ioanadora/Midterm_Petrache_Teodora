@@ -20,6 +20,7 @@ public class CreateBookingHandler(
 
         var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
 
+        // Validates R2, R3, R4, R5, R6, R10
         var bookingResult = Booking.Create(
             command.RoomId,
             command.BookedBy,
@@ -34,7 +35,13 @@ public class CreateBookingHandler(
 
         var booking = bookingResult.Value;
 
-        // R7: Overlap check
+        // R9: Maximum 2 active bookings per participant per UTC day across ALL rooms
+        var activeCount = bookings.CountActiveForParticipantOnDate(booking.BookedBy, booking.StartUtc);
+        var dailyLimitResult = Booking.ValidateDailyLimit(activeCount);
+        if (dailyLimitResult.IsFailure)
+            return Task.FromResult<Result<BookingCreatedResponse>>(dailyLimitResult.Error);
+
+        // R7: Overlap check for the requested room
         var existingBookings = bookings.ListForRoom(command.RoomId);
         foreach (var existing in existingBookings)
         {

@@ -30,4 +30,17 @@ public class BookingRepository
             return _bookings.Where(b => b.RoomId == roomId).ToList();
         }
     }
+
+    // R9: Count active bookings for a participant on a specific UTC day across ALL rooms
+    public int CountActiveForParticipantOnDate(string bookedBy, DateTime dateUtc)
+    {
+        lock (_lock)
+        {
+            var targetDate = dateUtc.Date;
+            return _bookings.Count(b =>
+                b.Status == BookingStatus.Active &&
+                string.Equals(b.BookedBy, bookedBy, StringComparison.OrdinalIgnoreCase) &&
+                b.StartUtc.Date == targetDate);
+        }
+    }
 }

@@ -5,7 +5,9 @@ using RoomHub.Api.Repositories;
 
 namespace RoomHub.Api.Features.Bookings.CancelBooking;
 
-public class CancelBookingHandler(BookingRepository bookings) : ICommandHandler<CancelBookingCommand, Unit>
+public class CancelBookingHandler(
+    BookingRepository bookings,
+    TimeProvider timeProvider) : ICommandHandler<CancelBookingCommand, Unit>
 {
     public Task<Result<Unit>> Handle(CancelBookingCommand command, CancellationToken cancellationToken = default)
     {
@@ -13,7 +15,10 @@ public class CancelBookingHandler(BookingRepository bookings) : ICommandHandler<
         if (booking is null)
             return Task.FromResult<Result<Unit>>(BookingErrors.NotFound);
 
-        var cancelResult = booking.Cancel();
+        var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
+
+        // R8 & R11: validates not already cancelled and cancellation at least 60 min before start
+        var cancelResult = booking.Cancel(nowUtc);
         if (cancelResult.IsFailure)
             return Task.FromResult<Result<Unit>>(cancelResult.Error);
 

@@ -45,8 +45,8 @@ public class Booking
         if (string.IsNullOrWhiteSpace(bookedBy))
             return BookingErrors.InvalidBookedBy;
 
-        // R3, R5, R6 validated via DateRange
-        var rangeResult = DateRange.Create(startUtc, endUtc, nowUtc);
+        // R3, R5, R6, R10 validated via DateRange
+        var rangeResult = DateRange.Create(startUtc, endUtc, nowUtc, roomCapacity);
         if (rangeResult.IsFailure)
             return rangeResult.Error;
 
@@ -67,11 +67,27 @@ public class Booking
             BookingStatus.Active);
     }
 
-    public Result<Unit> Cancel()
+    // R9: domain policy validation for daily limit (at most 2 active bookings per day)
+    public static Result<Unit> ValidateDailyLimit(int currentActiveCount)
+    {
+        if (currentActiveCount >= 2)
+            return BookingErrors.DailyLimitReached;
+
+        return Unit.Value;
+    }
+
+    // R8 & R11: cancellation domain method
+    public Result<Unit> Cancel(DateTime nowUtc)
     {
         // R8: cancelling an already cancelled booking gives 409
         if (Status == BookingStatus.Cancelled)
             return BookingErrors.AlreadyCancelled;
+
+        // R11: cancellation requires at least 60 minutes notice
+        // Exactly 60 minutes before start is allowed; less than 60 minutes is rejected with 409
+        var now = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        if (StartUtc < now.AddMinutes(60))
+            return BookingErrors.CancellationTooLate;
 
         Status = BookingStatus.Cancelled;
         return Unit.Value;
