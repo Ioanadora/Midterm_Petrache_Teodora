@@ -2,25 +2,25 @@ using RoomHub.Api.Common.Cqrs;
 using RoomHub.Api.Domain.Bookings;
 using RoomHub.Api.Domain.Common;
 using RoomHub.Api.Domain.Rooms;
-using RoomHub.Api.Repositories;
 
 namespace RoomHub.Api.Features.Bookings.CreateBooking;
 
 public class CreateBookingHandler(
-    RoomRepository rooms,
-    BookingRepository bookings,
+    IRoomRepository rooms,
+    IBookingRepository bookings,
+    IUnitOfWork unitOfWork,
     TimeProvider timeProvider) : ICommandHandler<CreateBookingCommand, BookingCreatedResponse>
 {
-    public Task<Result<BookingCreatedResponse>> Handle(CreateBookingCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<BookingCreatedResponse>> Handle(CreateBookingCommand command, CancellationToken cancellationToken = default)
     {
-        // Precedence: Room check FIRST! Returns 404 before validation
-        var room = rooms.Get(command.RoomId);
+        // 404 for a missing room comes before any validation
+        var room = await rooms.GetByIdAsync(command.RoomId, cancellationToken);
         if (room is null)
-            return Task.FromResult<Result<BookingCreatedResponse>>(RoomErrors.NotFound);
+            return RoomErrors.NotFound;
 
         var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
 
-        // Validates R2, R3, R4, R5, R6, R10
+        // R2, R3, R4, R5, R6, R10
         var bookingResult = Booking.Create(
             command.RoomId,
             command.BookedBy,
@@ -31,27 +31,24 @@ public class CreateBookingHandler(
             nowUtc);
 
         if (bookingResult.IsFailure)
-            return Task.FromResult<Result<BookingCreatedResponse>>(bookingResult.Error);
+            return bookingResult.Error;
 
         var booking = bookingResult.Value;
 
-        // R9: Maximum 2 active bookings per participant per UTC day across ALL rooms
-        var activeCount = bookings.CountActiveForParticipantOnDate(booking.BookedBy, booking.StartUtc);
+        // R9: at most 2 active bookings per participant per UTC day, across all rooms
+        var activeCount = await bookings.CountActiveForParticipantOnDateAsync(booking.BookedBy, booking.StartUtc, cancellationToken);
         var dailyLimitResult = Booking.ValidateDailyLimit(activeCount);
         if (dailyLimitResult.IsFailure)
-            return Task.FromResult<Result<BookingCreatedResponse>>(dailyLimitResult.Error);
+            return dailyLimitResult.Error;
 
-        // R7: Overlap check for the requested room
-        var existingBookings = bookings.ListForRoom(command.RoomId);
-        foreach (var existing in existingBookings)
-        {
-            if (existing.OverlapsWith(booking.StartUtc, booking.EndUtc))
-                return Task.FromResult<Result<BookingCreatedResponse>>(BookingErrors.RoomOccupied);
-        }
+        // R7: no overlap with active bookings of the same room
+        var activeBookings = await bookings.ListActiveForRoomAsync(command.RoomId, cancellationToken);
+        if (activeBookings.Any(existing => existing.OverlapsWith(booking.StartUtc, booking.EndUtc)))
+            return BookingErrors.RoomOccupied;
 
         bookings.Add(booking);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Task.FromResult<Result<BookingCreatedResponse>>(
-            new BookingCreatedResponse(booking.Id, booking.RoomId, booking.Status.ToString()));
+        return new BookingCreatedResponse(booking.Id, booking.RoomId, booking.Status.ToString());
     }
 }
