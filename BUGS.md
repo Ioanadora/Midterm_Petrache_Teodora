@@ -1,8 +1,8 @@
 # BUGS
 
-The starter contains behaviors that contradict `ASSIGNMENT.md`. Write here every discrepancy you found.
-Fill it in yourself, in your own words. There is no required number: what counts is that they are real.
-
 | Which rule from ASSIGNMENT.md is violated (R1–R8) | Where the problem was in the starter (file, approximate line) | How you discovered it (test, reading, AI) | What you changed |
 |---|---|---|---|
-| _(fill in)_ | _(fill in)_ | _(fill in)_ | _(fill in)_ |
+| R5 - rezervarea nu poate incepe in trecut | `Services/BookingService.cs`, metoda `Create`, liniile 8-45. Nu verifica daca `startUtc` era in trecut. | Am observat problema cand am comparat codul initial cu cerintele din assignment, folosind si AI pentru analiza. | Am adaugat `TimeProvider` in `Program.cs` si in `CreateBookingHandler`. Verificarea am mutat-o in `DateRange.Create`, unde se compara data de inceput cu timpul curent. |
+| R6 - durata maxima de 4 ore | `Services/BookingService.cs`, metoda `Create`, liniile 17-19. Verifica doar daca data de sfarsit era dupa cea de inceput, nu si durata maxima. | Am gasit problema citind codul initial si regulile din `ASSIGNMENT.md`. | Am adaugat verificarea duratei in `DateRange.Create`. Daca durata depaseste limita, se returneaza eroarea `DurationExceeded` cu status 400. |
+| R7 - rezervarile care doar se ating nu trebuie sa fie considerate suprapuse | `Services/BookingService.cs`, liniile 26-30. Se folosea `<=` si nu se verifica daca rezervarea era activa. | Am observat problema la citirea codului si am verificat cu teste HTTP pentru intervale consecutive si rezervari anulate. | Am modificat `Booking.OverlapsWith` sa foloseasca `<` in loc de `<=` si sa tina cont doar de rezervarile active. Am modificat si `BookingRepository` sa aduca rezervarile active pentru camera respectiva. |
+| R8 - anularea repetata trebuie sa returneze 409 | `Services/BookingService.cs`, metoda `Cancel`, liniile 56-60. Statusul era schimbat direct in `Cancelled`, fara verificare. | Am gasit problema citind codul si testand anularea aceleiasi rezervari de doua ori. | Am mutat anularea in `Booking.Cancel`, unde se verifica daca rezervarea este deja anulata. In acest caz se returneaza `AlreadyCancelled` cu status 409. |
