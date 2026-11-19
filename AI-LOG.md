@@ -1,7 +1,9 @@
 # AI-LOG
 
-Write down, in order, what you asked the AI. It is not a punishment: a missing or false log lowers the level D grade.
-
 | Time (approx.) | What you asked (briefly) | What you kept | What you changed or rejected |
 |---|---|---|---|
-| _(fill in)_ | _(fill in)_ | _(fill in)_ | _(fill in)_ |
+| min 5 | Am cerut AI-ului sa analizeze proiectul initial, fisierele `ASSIGNMENT.md`, `README.md` si `roomhub.http` si sa faca un plan pentru nivelele A-D. | Am pastrat planul pe nivele si problemele gasite in cod pentru R5-R8. | Nu am schimbat nimic aici, a fost doar analiza proiectului. |
+| min 4 | Am cerut implementarea nivelului A, organizarea proiectului pe Vertical Slice si verificarea endpointurilor. | Am pastrat cele 5 features din `Features`, corectarea suprapunerilor R7 si verificarea anularii repetate R8. | Am pastrat temporar repository-urile in-memory ca sa nu complic proiectul de la inceput si sa ramana functional. |
+| min 15 | Am cerut implementarea nivelului B cu Rich Domain, `Result<T>`, handlere CQRS, `TimeProvider` si regulile R5-R6. | Am pastrat clasele `Room`, `Booking`, `DateRange`, `Result<T>`, `ErrorHttpExtensions` si inregistrarea handlerelor prin `AddHandlers`. | Am renuntat la modificarea `UseAppHost` pe `true` si la proiectul separat de teste xUnit, deoarece au aparut probleme cu Windows Smart App Control. Am pastrat `UseAppHost` pe `false`. |
+| min 10 | Am cerut implementarea noilor reguli R9, R10 si R11, pentru limita zilnica de rezervari, durata in functie de capacitatea salii si anularea cu minim 60 de minute inainte. | Am pastrat `Booking.ValidateDailyLimit`, metoda `CountActiveForParticipantOnDate`, verificarile din `DateRange.Create` si `Booking.Cancel` cu `TimeProvider`. | Am corectat datele unui test HTTP, deoarece intervalul ales se suprapunea cu rezervarea altui participant. |
+| min 10 | Am cerut implementarea nivelului C cu EF Core, SQLite, Repository, Unit of Work si verificarea datelor dupa restart. | Am pastrat `RoomHubDbContext`, `IUnitOfWork`, configurarile EF Core, `UtcDateTimeConverter`, `DatabaseInitializer` si am inlocuit repository-urile in-memory. | Am schimbat versiunea EF Core SQLite din `11.0.0`, care nu era compatibila, in `10.0.15`. Am folosit o baza de date separata pentru teste. |
