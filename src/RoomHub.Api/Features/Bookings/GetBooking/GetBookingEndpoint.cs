@@ -1,6 +1,6 @@
 using RoomHub.Api.Services;
 
-namespace RoomHub.Api.Endpoints;
+namespace RoomHub.Api.Features.Bookings.GetBooking;
 
 public record BookingResponse(
     Guid Id,
@@ -11,23 +11,15 @@ public record BookingResponse(
     int Attendees,
     string Status);
 
-public static class BookingEndpoints
+public static class GetBookingEndpoint
 {
-    public static void MapBookingEndpoints(this IEndpointRouteBuilder app)
+    public static void Map(RouteGroupBuilder group)
     {
-        var group = app.MapGroup("/api/bookings").WithTags("Bookings");
-
         group.MapGet("/{id:guid}", (Guid id, BookingService service) =>
         {
             var b = service.Get(id);
             return Results.Ok(new BookingResponse(
                 b.Id, b.RoomId, b.BookedBy, b.StartUtc, b.EndUtc, b.Attendees, b.Status.ToString()));
-        });
-
-        group.MapPost("/{id:guid}/cancel", (Guid id, BookingService service) =>
-        {
-            service.Cancel(id);
-            return Results.NoContent();
         });
     }
 }
