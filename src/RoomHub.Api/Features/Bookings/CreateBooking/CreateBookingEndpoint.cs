@@ -1,23 +1,30 @@
-using RoomHub.Api.Services;
+using RoomHub.Api.Common;
+using RoomHub.Api.Common.Cqrs;
 
 namespace RoomHub.Api.Features.Bookings.CreateBooking;
-
-public record CreateBookingRequest(string? BookedBy, DateTime StartUtc, DateTime EndUtc, int Attendees);
-
-public record BookingCreatedResponse(Guid Id, Guid RoomId, string Status);
 
 public static class CreateBookingEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/{roomId:guid}/bookings", (Guid roomId, CreateBookingRequest request, BookingService service) =>
+        group.MapPost("/{roomId:guid}/bookings", async (
+            Guid roomId,
+            CreateBookingRequest request,
+            ICommandHandler<CreateBookingCommand, BookingCreatedResponse> handler,
+            CancellationToken ct) =>
         {
-            var booking = service.Create(
-                roomId, request.BookedBy, request.StartUtc, request.EndUtc, request.Attendees);
+            var command = new CreateBookingCommand(
+                roomId,
+                request.BookedBy,
+                request.StartUtc,
+                request.EndUtc,
+                request.Attendees);
 
-            return Results.Created(
-                $"/api/bookings/{booking.Id}",
-                new BookingCreatedResponse(booking.Id, booking.RoomId, booking.Status.ToString()));
+            var result = await handler.Handle(command, ct);
+            if (result.IsFailure)
+                return result.Error.ToProblem();
+
+            return Results.Created($"/api/bookings/{result.Value.Id}", result.Value);
         });
     }
 }

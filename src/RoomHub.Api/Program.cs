@@ -1,20 +1,21 @@
+using RoomHub.Api.Common.Cqrs;
 using RoomHub.Api.Features.Bookings;
 using RoomHub.Api.Features.Rooms;
-using RoomHub.Api.Middleware;
 using RoomHub.Api.Repositories;
-using RoomHub.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Level A: Vertical Slice Architecture with in-memory persistence
+// TimeProvider registered in DI (Lecture 03 / Rule R5)
+builder.Services.AddSingleton(TimeProvider.System);
+
+// In-memory repositories
 builder.Services.AddSingleton<RoomRepository>();
 builder.Services.AddSingleton<BookingRepository>();
-builder.Services.AddScoped<RoomService>();
-builder.Services.AddScoped<BookingService>();
+
+// CQRS Handlers auto-registration (Lecture 06)
+builder.Services.AddHandlers();
 
 var app = builder.Build();
-
-app.UseMiddleware<ExceptionMiddleware>();
 
 app.MapGet("/", () => "RoomHub API is running.");
 app.MapRoomsEndpoints();

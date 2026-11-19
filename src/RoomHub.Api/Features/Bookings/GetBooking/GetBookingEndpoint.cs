@@ -1,25 +1,22 @@
-using RoomHub.Api.Services;
+using RoomHub.Api.Common;
+using RoomHub.Api.Common.Cqrs;
 
 namespace RoomHub.Api.Features.Bookings.GetBooking;
-
-public record BookingResponse(
-    Guid Id,
-    Guid RoomId,
-    string BookedBy,
-    DateTime StartUtc,
-    DateTime EndUtc,
-    int Attendees,
-    string Status);
 
 public static class GetBookingEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/{id:guid}", (Guid id, BookingService service) =>
+        group.MapGet("/{id:guid}", async (
+            Guid id,
+            IQueryHandler<GetBookingQuery, BookingResponse> handler,
+            CancellationToken ct) =>
         {
-            var b = service.Get(id);
-            return Results.Ok(new BookingResponse(
-                b.Id, b.RoomId, b.BookedBy, b.StartUtc, b.EndUtc, b.Attendees, b.Status.ToString()));
+            var result = await handler.Handle(new GetBookingQuery(id), ct);
+            if (result.IsFailure)
+                return result.Error.ToProblem();
+
+            return Results.Ok(result.Value);
         });
     }
 }

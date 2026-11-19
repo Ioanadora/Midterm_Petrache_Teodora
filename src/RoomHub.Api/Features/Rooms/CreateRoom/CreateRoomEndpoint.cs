@@ -1,21 +1,23 @@
-using RoomHub.Api.Services;
+using RoomHub.Api.Common;
+using RoomHub.Api.Common.Cqrs;
 
 namespace RoomHub.Api.Features.Rooms.CreateRoom;
-
-public record CreateRoomRequest(string? Name, int Capacity);
-
-public record CreateRoomResponse(Guid Id, string Name, int Capacity);
 
 public static class CreateRoomEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/", (CreateRoomRequest request, RoomService service) =>
+        group.MapPost("/", async (
+            CreateRoomRequest request,
+            ICommandHandler<CreateRoomCommand, CreateRoomResponse> handler,
+            CancellationToken ct) =>
         {
-            var room = service.Create(request.Name, request.Capacity);
-            return Results.Created(
-                $"/api/rooms/{room.Id}",
-                new CreateRoomResponse(room.Id, room.Name, room.Capacity));
+            var command = new CreateRoomCommand(request.Name, request.Capacity);
+            var result = await handler.Handle(command, ct);
+            if (result.IsFailure)
+                return result.Error.ToProblem();
+
+            return Results.Created($"/api/rooms/{result.Value.Id}", result.Value);
         });
     }
 }
